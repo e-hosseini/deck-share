@@ -30,9 +30,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/package.json ./package.json
 
-# Install Prisma CLI + dotenv so "docker compose exec app npx prisma migrate deploy" works
-RUN npm install prisma@7.4.1 dotenv@17.3.1 && chown -R nextjs:nodejs /app/node_modules
+# Install Prisma CLI, dotenv, and tsx so "prisma migrate deploy" and "npm run db:seed" work
+RUN npm install prisma@7.4.1 dotenv@17.3.1 tsx@4.21.0 && chown -R nextjs:nodejs /app/node_modules
 
 USER nextjs
 
