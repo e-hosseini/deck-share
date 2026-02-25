@@ -1,4 +1,12 @@
-import "dotenv/config";
+// Load .env if available (e.g. local dev); in Docker DATABASE_URL is already in the environment
+if (typeof require !== "undefined") {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- optional in container
+    require("dotenv/config");
+  } catch {
+    // dotenv not installed or failed; use process.env
+  }
+}
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hash } from "bcryptjs";
