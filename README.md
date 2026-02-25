@@ -255,7 +255,7 @@ Use the image published by the [GitHub Actions workflow](.github/workflows/docke
          - uploads_data:/app/uploads
        depends_on:
          postgres:
-           condition: service_healthy()
+           condition: service_healthy
 
    volumes:
      postgres_data:
