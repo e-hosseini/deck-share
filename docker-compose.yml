@@ -1,0 +1,42 @@
+# Production: Postgres + Next.js app
+# Usage:
+#   1. Set NEXTAUTH_SECRET in .env (required).
+#   2. docker compose up -d --build
+#   3. Run migrations once (from host with DATABASE_URL): npx prisma migrate deploy
+#      Or use a one-off container with prisma installed to run migrations.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: deck-share-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: deck_share
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: deck-share-app
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/deck_share?schema=public
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy()
+
+volumes:
+  postgres_data:
+  uploads_data:

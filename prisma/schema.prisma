@@ -1,0 +1,170 @@
+// Prisma schema for Deck Share Web App
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String    @map("password_hash")
+  name           String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  directories    Directory[]
+  files          File[]             @relation("UploadedBy")
+  decks          Deck[]             @relation("CreatedDecks")
+  deckItems      DeckItem[]     @relation("DeckItemAddedBy")
+  deckItemHistory DeckItemHistory[]
+  shares         Share[]
+}
+
+model Directory {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?  @map("parent_id")
+  ownerId   String   @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  parent     Directory?  @relation("DirectoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children   Directory[] @relation("DirectoryTree")
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  files      File[]
+  deckItems  DeckItem[]
+}
+
+model File {
+  id           String   @id @default(cuid())
+  name         String
+  mimeType     String   @map("mime_type")
+  size         Int      // bytes
+  storageKey   String   @unique @map("storage_key")
+  directoryId  String?  @map("directory_id")
+  uploadedById String   @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  directory  Directory? @relation(fields: [directoryId], references: [id], onDelete: SetNull)
+  uploadedBy User       @relation("UploadedBy", fields: [uploadedById], references: [id], onDelete: Cascade)
+  deckItems  DeckItem[]
+}
+
+model Deck {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  createdBy  User        @relation("CreatedDecks", fields: [createdById], references: [id], onDelete: Cascade)
+  items      DeckItem[]
+  shares     Share[]
+}
+
+model DeckItem {
+  id          String   @id @default(cuid())
+  deckId      String   @map("deck_id")
+  fileId      String?  @map("file_id")
+  directoryId String?  @map("directory_id")
+  order       Int      @default(0)
+  addedById   String   @map("added_by_id")
+  addedAt     DateTime @default(now()) @map("added_at")
+
+  deck       Deck             @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  file       File?            @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  directory  Directory?       @relation(fields: [directoryId], references: [id], onDelete: Cascade)
+  history    DeckItemHistory[]
+  addedBy    User             @relation("DeckItemAddedBy", fields: [addedById], references: [id], onDelete: Cascade)
+}
+
+model DeckItemHistory {
+  id        String   @id @default(cuid())
+  deckItemId String  @map("deck_item_id")
+  action    String   // added | removed | reordered
+  payload   Json?    // optional metadata
+  byUserId  String   @map("by_user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  deckItem DeckItem @relation(fields: [deckItemId], references: [id], onDelete: Cascade)
+  byUser   User     @relation(fields: [byUserId], references: [id], onDelete: Cascade)
+}
+
+model Share {
+  id                String    @id @default(cuid())
+  deckId            String    @map("deck_id")
+  slug              String    @unique // 6-char alphanumeric
+  title             String
+  descriptionRichText String? @map("description_rich_text") @db.Text
+  audienceName      String    @map("audience_name")
+  expiresAt         DateTime  @map("expires_at")
+  targetLink        String?   @map("target_link")
+  contactEmail      String?   @map("contact_email")
+  passwordHash      String?   @map("password_hash")
+  singleUse         Boolean   @default(false) @map("single_use")
+  isActive          Boolean   @default(true) @map("is_active")
+  createdById       String    @map("created_by_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  deck     Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  createdBy User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  visitors Visitor[]
+}
+
+model GlobalCta {
+  id          String   @id @default(cuid())
+  title       String?  @map("cta_title")
+  description String?  @map("cta_description") @db.Text
+  link        String?  @map("cta_link")
+  linkLabel   String?  @map("cta_link_label")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+}
+
+model SiteSettings {
+  id                String   @id @default(cuid())
+  websiteTitle      String?  @map("website_title")
+  footerCopyright   String?  @map("footer_copyright") @db.Text
+  footerLinks       Json?    @map("footer_links") // [{ label: string, url: string }]
+  logoStorageKey    String?  @map("logo_storage_key")
+  logoMimeType      String?  @map("logo_mime_type")
+  posthogProjectKey String?  @map("posthog_project_key")
+  posthogHost       String?  @map("posthog_host") // e.g. https://us.i.posthog.com
+  updatedAt         DateTime @updatedAt @map("updated_at")
+}
+
+model Visitor {
+  id              String   @id @default(cuid())
+  shareId         String   @map("share_id")
+  fingerprintHash String   @map("fingerprint_hash")
+  firstSeenAt     DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt      DateTime @default(now()) @map("last_seen_at")
+  ip              String?
+  userAgent       String?  @map("user_agent") @db.Text
+  country         String?
+  region          String?
+  referrer        String?  @db.Text
+
+  share   Share          @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  actions VisitorAction[]
+
+  @@unique([shareId, fingerprintHash])
+}
+
+model VisitorAction {
+  id           String   @id @default(cuid())
+  visitorId    String   @map("visitor_id")
+  shareId      String   @map("share_id")
+  action       String   // page_view | file_open | file_download | directory_open | navigation
+  resourceType String?  @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  visitor Visitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+}

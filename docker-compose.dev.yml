@@ -1,0 +1,24 @@
+# Development: Postgres + Next.js (run app with npm run dev on host with volume mount)
+# Usage: docker compose -f docker-compose.dev.yml up -d postgres
+# Then: npm run dev (and migrate with npx prisma migrate dev)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: deck-share-db-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: deck_share
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
