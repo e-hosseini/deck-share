@@ -117,6 +117,8 @@ Edit `.env`:
 - `NEXTAUTH_SECRET` – e.g. `openssl rand -base64 32`.
 - `NEXTAUTH_URL` – app URL (e.g. `http://localhost:3000` for dev).
 - `UPLOAD_DIR` – directory for uploads (default `./uploads`).
+- `SEED_EMAIL` – (optional) admin email for `db:seed`; default `admin@example.com`.
+- `SEED_PASSWORD` – (optional) admin password for `db:seed`; default `admin123`.
 
 ---
 
@@ -251,6 +253,8 @@ Use the image published by the [GitHub Actions workflow](.github/workflows/docke
          NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
          NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
          UPLOAD_DIR: /app/uploads
+         SEED_EMAIL: ${SEED_EMAIL:-admin@example.com}
+         SEED_PASSWORD: ${SEED_PASSWORD:-admin123}
        volumes:
          - uploads_data:/app/uploads
        depends_on:

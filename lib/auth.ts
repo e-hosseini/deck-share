@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import type { NextAuthConfig } from "next-auth";
 
 const config = {
+  trustHost: true,
   providers: [
     Credentials({
       name: "credentials",
