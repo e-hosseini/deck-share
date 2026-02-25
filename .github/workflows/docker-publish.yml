@@ -9,6 +9,10 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: docker.io
 
