@@ -1,6 +1,8 @@
 # Deck Share
 
-Deck Share is a web application for organizing files into **decks** and sharing them via public links. Admins upload and organize files, build decks from files or whole folders, and create shareable links. Visitors open a link to browse and view content in-app; all visits and actions are tracked for analytics.
+[![Build and push Docker image to Docker Hub](https://github.com/e-hosseini/deck-share/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/e-hosseini/deck-share/actions/workflows/docker-publish.yml)
+
+Deck Share is a web application for organizing files into **decks** and sharing them via public links. Admins upload and organize files, build decks from files or whole folders, and create shareable links. Visitors open a link to browse and view content in-app; all visits and actions are tracked for analytics. Admins upload and organize files, build decks from files or whole folders, and create shareable links. Visitors open a link to browse and view content in-app; all visits and actions are tracked for analytics.
 
 > **Disclaimer:** We do not guarantee the security of files or data stored or served by this application. Use this project at your own risk.
 
@@ -240,7 +242,7 @@ Use the image published by the [GitHub Actions workflow](.github/workflows/docke
          retries: 5
 
      app:
-       image: YOUR_DOCKERHUB_USERNAME/deck-share:latest
+       image: ehosseini/deck-share:latest
        container_name: deck-share-app
        ports:
          - "3000:3000"
