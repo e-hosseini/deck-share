@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import {
   Dialog,
@@ -195,6 +195,46 @@ export default function SharePage() {
       cancelled = true;
     };
   }, [data?.siteSettings?.posthogProjectKey, data?.siteSettings?.posthogHost]);
+
+  // Visit lifecycle: leave (tab hidden / close) and return (tab visible again)
+  const wasHiddenRef = useRef(false);
+  const lastLeaveAtRef = useRef<number>(0);
+  useEffect(() => {
+    if (!data || typeof document === "undefined") return;
+    function sendBeaconTrack(action: string, metadata?: Record<string, unknown>) {
+      const payload = JSON.stringify({
+        slug,
+        fingerprint,
+        action,
+        metadata,
+      });
+      navigator.sendBeacon("/api/track", new Blob([payload], { type: "application/json" }));
+    }
+    function sendVisitLeave() {
+      const now = Date.now();
+      if (now - lastLeaveAtRef.current < 2000) return;
+      lastLeaveAtRef.current = now;
+      sendBeaconTrack("visit_leave", { at: new Date().toISOString() });
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        wasHiddenRef.current = true;
+        sendVisitLeave();
+      } else if (document.visibilityState === "visible" && wasHiddenRef.current) {
+        wasHiddenRef.current = false;
+        track("visit_return", undefined, undefined, { at: new Date().toISOString() });
+      }
+    }
+    function onPageHide() {
+      sendVisitLeave();
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [data, slug, fingerprint, track]);
 
   async function submitPassword(e: React.FormEvent) {
     e.preventDefault();
