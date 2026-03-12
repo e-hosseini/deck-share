@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; visitorId: string }> }
 ) {
   const session = await auth();
@@ -24,8 +24,15 @@ export async function GET(
   if (!visitor) {
     return NextResponse.json({ error: "Visitor not found" }, { status: 404 });
   }
+
+  const sinceParam = req.nextUrl.searchParams.get("since");
+  const since = sinceParam ? new Date(sinceParam) : null;
+  const onlyNewActions = since && !Number.isNaN(since.getTime());
+
   const actions = await prisma.visitorAction.findMany({
-    where: { visitorId, shareId },
+    where: onlyNewActions
+      ? { visitorId, shareId, createdAt: { gt: since } }
+      : { visitorId, shareId },
     orderBy: { createdAt: "asc" },
   });
 
@@ -59,6 +66,10 @@ export async function GET(
           ? directoryNames.get(a.resourceId) ?? null
           : null,
   }));
+
+  if (onlyNewActions) {
+    return NextResponse.json({ actions: actionsWithNames });
+  }
 
   return NextResponse.json({
     share: {

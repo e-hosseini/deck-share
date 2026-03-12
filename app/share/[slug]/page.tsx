@@ -323,7 +323,10 @@ export default function SharePage() {
           {cta && cta.title && cta.link && (
             <Button
               variant="default"
-              onClick={() => setCtaModalOpen(true)}
+              onClick={() => {
+                track("cta_modal_opened", "cta", undefined, { ctaTitle: cta.title });
+                setCtaModalOpen(true);
+              }}
               className="shrink-0"
             >
               {cta.title}
@@ -591,7 +594,10 @@ export default function SharePage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={ctaModalOpen} onOpenChange={setCtaModalOpen}>
+      <Dialog open={ctaModalOpen} onOpenChange={(open) => {
+        setCtaModalOpen(open);
+        if (!open) track("cta_modal_closed", "cta", undefined, { action: "close" });
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{cta?.title ?? "Call to action"}</DialogTitle>
@@ -611,6 +617,7 @@ export default function SharePage() {
             <Button
               onClick={() => {
                 if (cta?.link) {
+                  track("cta_modal_link_clicked", "cta", undefined, { link: cta.link, linkLabel: cta.linkLabel ?? undefined });
                   window.open(cta.link, "_blank", "noopener,noreferrer");
                 }
                 setCtaModalOpen(false);

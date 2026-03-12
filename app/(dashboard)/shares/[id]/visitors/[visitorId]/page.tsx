@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -110,6 +110,12 @@ export default function VisitorEventsPage() {
   const visitorId = params.visitorId as string;
   const [data, setData] = useState<VisitorEventsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const latestActionAtRef = useRef<string | null>(null);
+  const actions = data?.actions ?? [];
+  const lastActionAt = actions.length > 0 ? actions[actions.length - 1].createdAt : null;
+  useEffect(() => {
+    latestActionAtRef.current = lastActionAt;
+  }, [lastActionAt]);
 
   useEffect(() => {
     fetch(`/api/shares/${id}/visitors/${visitorId}`)
@@ -121,6 +127,31 @@ export default function VisitorEventsPage() {
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [id, visitorId]);
+
+  useEffect(() => {
+    if (!id || !visitorId || !data) return;
+    const interval = setInterval(() => {
+      const since = latestActionAtRef.current;
+      if (!since) return;
+      const url = `/api/shares/${id}/visitors/${visitorId}?since=${encodeURIComponent(since)}`;
+      fetch(url)
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.actions?.length) {
+            setData((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    actions: [...prev.actions, ...json.actions],
+                  }
+                : null
+            );
+          }
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [id, visitorId, data]);
 
   if (loading || !data) {
     return (
@@ -134,7 +165,7 @@ export default function VisitorEventsPage() {
     );
   }
 
-  const { share, visitor, actions } = data;
+  const { share, visitor } = data;
 
   return (
     <div className="p-6 space-y-6">
@@ -188,7 +219,7 @@ export default function VisitorEventsPage() {
         <CardHeader>
           <CardTitle>Events</CardTitle>
           <CardDescription>
-            Timeline of page views, file opens, downloads, and navigations.
+            Timeline of page views, file opens, downloads, and navigations (updates every 5s).
           </CardDescription>
         </CardHeader>
         <CardContent>
