@@ -19,9 +19,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AddFromFilesDialog } from "@/components/deck-builder/add-from-files-dialog";
 import { ShareDeckSheet } from "@/components/share-form/share-deck-sheet";
-import { Folder, Trash2, Share2, ArrowLeft, History } from "lucide-react";
+import { RichTextEditor } from "@/components/share-form/rich-text-editor";
+import { Folder, Trash2, Share2, ArrowLeft, History, Pencil } from "lucide-react";
 import { FileTypeIcon } from "@/components/file-type-icon";
 
 type FileRecord = { id: string; name: string; mimeType: string } | null;
@@ -50,6 +61,95 @@ type HistoryEntry = {
   deckItem: { file: FileRecord; directory: DirRecord };
 };
 
+function EditDeckDialog({
+  deck,
+  open,
+  onOpenChange,
+  onSave,
+}: {
+  deck: Deck;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (payload: { name?: string; description?: string | null }) => Promise<void>;
+}) {
+  const [name, setName] = useState(deck.name);
+  const [description, setDescription] = useState(deck.description ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setName(deck.name);
+      setDescription(deck.description ?? "");
+      setError(null);
+    }
+  }, [open, deck.name, deck.description]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError("Name is required");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave({
+        name: trimmedName,
+        description: description.trim() || null,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="container min-w-lg max-w-[calc(100%-2rem)]">
+        <DialogHeader>
+          <DialogTitle>Edit deck</DialogTitle>
+          <DialogDescription>Change the deck name and description.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="deck-name">Name</Label>
+            <Input
+              id="deck-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Deck name"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="deck-description">Description (optional)</Label>
+            <RichTextEditor
+              value={description}
+              onChange={setDescription}
+              placeholder="Short description…"
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function DeckDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -59,6 +159,7 @@ export default function DeckDetailPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -108,6 +209,21 @@ export default function DeckDetailPage() {
     if (items.length > 0) refresh();
   }
 
+  async function handleUpdateDeck(payload: { name?: string; description?: string | null }) {
+    const res = await fetch(`/api/decks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json.error ?? "Failed to update deck");
+    }
+    const json = await res.json();
+    setDeck(json.deck);
+    setEditDialogOpen(false);
+  }
+
   if (loading && !deck) {
     return (
       <div className="p-6">
@@ -138,11 +254,17 @@ export default function DeckDetailPage() {
           <div>
             <h1 className="text-2xl font-semibold">{deck.name}</h1>
             {deck.description && (
-              <p className="text-muted-foreground text-sm">{deck.description}</p>
+              <div
+                className="text-muted-foreground text-sm prose prose-sm dark:prose-invert max-w-none line-clamp-1"
+                dangerouslySetInnerHTML={{ __html: deck.description }}
+              />
             )}
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={() => setEditDialogOpen(true)} title="Edit deck">
+            <Pencil className="size-4" />
+          </Button>
           <Button variant="outline" onClick={() => setShowHistory(!showHistory)}>
             <History className="size-4 mr-2" />
             History
@@ -275,6 +397,12 @@ export default function DeckDetailPage() {
         deckId={id}
         open={shareSheetOpen}
         onOpenChange={setShareSheetOpen}
+      />
+      <EditDeckDialog
+        deck={deck}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleUpdateDeck}
       />
     </div>
   );

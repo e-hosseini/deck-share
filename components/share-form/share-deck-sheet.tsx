@@ -13,7 +13,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { RichTextEditor } from "@/components/share-form/rich-text-editor";
 import { toast } from "sonner";
 
 function getDefaultExpiry() {
@@ -29,8 +28,6 @@ type ShareDeckSheetProps = {
 };
 
 export function ShareDeckSheet({ deckId, open, onOpenChange }: ShareDeckSheetProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [audienceName, setAudienceName] = useState("");
   const [expiresAt, setExpiresAt] = useState(() => getDefaultExpiry());
   const [targetLink, setTargetLink] = useState("");
@@ -58,8 +55,6 @@ export function ShareDeckSheet({ deckId, open, onOpenChange }: ShareDeckSheetPro
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: title.trim(),
-          descriptionRichText: description.trim() || null,
           audienceName: audienceName.trim(),
           expiresAt: expiresAt || null,
           targetLink: targetLink.trim() || null,
@@ -137,7 +132,7 @@ export function ShareDeckSheet({ deckId, open, onOpenChange }: ShareDeckSheetPro
               <SheetHeader className="shrink-0 border-b px-6 py-4">
                 <SheetTitle>Create share</SheetTitle>
                 <SheetDescription>
-                  Set title, audience, expiry, and optional password. A unique link will be generated.
+                  Set audience, expiry, and optional password. Title and description come from the deck. A unique link will be generated.
                 </SheetDescription>
               </SheetHeader>
               <form
@@ -148,23 +143,6 @@ export function ShareDeckSheet({ deckId, open, onOpenChange }: ShareDeckSheetPro
                   {error && (
                     <p className="text-sm text-destructive">{error}</p>
                   )}
-                  <div className="space-y-2">
-                    <Label htmlFor="sheet-title">Title</Label>
-                    <Input
-                      id="sheet-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Share title"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description (rich text)</Label>
-                    <RichTextEditor
-                      value={description}
-                      onChange={setDescription}
-                      placeholder="Optional description for the audience…"
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="sheet-audience">Audience name</Label>
                     <Input

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -13,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { RichTextEditor } from "@/components/share-form/rich-text-editor";
 
 export default function NewDeckPage() {
   const router = useRouter();
@@ -45,8 +45,7 @@ export default function NewDeckPage() {
   }
 
   return (
-    <div className="p-6 flex justify-center container">
-    <div className="p-6 min-w-2xl max-w-4xl">
+    <div className="p-6 container mx-auto">
       <Card>
         <CardHeader>
           <CardTitle>New deck</CardTitle>
@@ -67,12 +66,11 @@ export default function NewDeckPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description (optional)</Label>
-              <Textarea
-                id="description"
+              <RichTextEditor
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description"
-                rows={3}
+                onChange={setDescription}
+                placeholder="Optional description…"
+                className="min-h-[100px]"
               />
             </div>
             <div className="flex gap-2">
@@ -86,7 +84,6 @@ export default function NewDeckPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
     </div>
   );
 }
