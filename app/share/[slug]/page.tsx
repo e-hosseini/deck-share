@@ -420,7 +420,7 @@ export default function SharePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background container max-w-3xl m-auto text-xs">
+    <div className="min-h-screen flex flex-col bg-background container max-w-3xl m-auto text-sm">
       {/* Top: menu / header */}
       <header className="shrink-0 border-b bg-background">
         <div className="flex flex-wrap items-start justify-between gap-4 p-4">
