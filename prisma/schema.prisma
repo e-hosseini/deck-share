@@ -100,8 +100,6 @@ model Share {
   id                String    @id @default(cuid())
   deckId            String    @map("deck_id")
   slug              String    @unique // 6-char alphanumeric
-  title             String
-  descriptionRichText String? @map("description_rich_text") @db.Text
   audienceName      String    @map("audience_name")
   expiresAt         DateTime  @map("expires_at")
   targetLink        String?   @map("target_link")
