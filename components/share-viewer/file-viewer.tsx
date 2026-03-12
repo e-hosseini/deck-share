@@ -1,18 +1,48 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { isDocx, isXlsx, isPptx } from "@/lib/file-mime";
+import { ShareVideoPlayer } from "@/components/share-viewer/share-video-player";
 
 const PdfViewer = dynamic(
   () => import("@/components/pdf-viewer").then((m) => m.PdfViewer),
-  { ssr: false }
+  { ssr: false, loading: () => <FileViewerLoading message="Loading PDF…" /> }
 );
 
 const PptxViewer = dynamic(
   () => import("@/components/pptx-viewer").then((m) => m.PptxViewer),
-  { ssr: false }
+  { ssr: false, loading: () => <FileViewerLoading message="Loading presentation…" /> }
 );
+
+function FileViewerLoading({ message = "Loading…" }: { message?: string }) {
+  return (
+    <div className="flex h-full min-h-[200px] w-full items-center justify-center gap-2 bg-muted/30 p-4">
+      <span className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden />
+      <span className="text-sm text-muted-foreground">{message}</span>
+    </div>
+  );
+}
+
+function ImageWithLoading({ url, name }: { url: string; name: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative flex h-full w-full items-center justify-center">
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-muted/30">
+          <span className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden />
+          <span className="text-sm text-muted-foreground">Loading image…</span>
+        </div>
+      )}
+      <img
+        src={url}
+        alt={name}
+        className="max-h-full w-full max-w-full object-contain"
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
+}
 
 export type TrackPayload = {
   action: string;
@@ -34,8 +64,6 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack 
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const url = `/api/share/${slug}/file/${fileId}`;
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const progressTrackedRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     onTrackOpen();
@@ -98,50 +126,20 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack 
 
   if (isImage) {
     return (
-      <div className="flex h-full min-h-0 items-center justify-center bg-muted/30 p-4">
-        <img src={url} alt={name} className="max-h-full w-full max-w-full object-contain" />
+      <div className="flex h-full min-h-0 items-center justify-center bg-muted/30 py-4">
+        <ImageWithLoading url={url} name={name} />
       </div>
     );
   }
 
   if (isVideo) {
     return (
-      <div className="flex h-full min-h-0 bg-muted/30 p-4">
-        <video
-          ref={videoRef}
-          controls
-          className="h-full w-full"
+      <div className="flex h-full min-h-0 items-center justify-center bg-muted/30 py-4">
+        <ShareVideoPlayer
           src={url}
-          onPlay={() => {
-            progressTrackedRef.current.clear();
-            track("video_play");
-          }}
-          onPause={() => {
-            const v = videoRef.current;
-            track("video_pause", v ? { currentTime: v.currentTime, duration: v.duration } : undefined);
-          }}
-          onEnded={() => {
-            const v = videoRef.current;
-            track("video_ended", v ? { duration: v.duration } : undefined);
-          }}
-          onTimeUpdate={() => {
-            const v = videoRef.current;
-            if (!v || v.duration <= 0 || !onTrack) return;
-            const percent = Math.floor((v.currentTime / v.duration) * 100);
-            const milestones = [25, 50, 75, 100];
-            const hit = milestones.find((m) => percent >= m && !progressTrackedRef.current.has(m));
-            if (hit !== undefined) {
-              progressTrackedRef.current.add(hit);
-              track("video_progress", {
-                percent: hit,
-                currentTime: v.currentTime,
-                duration: v.duration,
-              });
-            }
-          }}
-        >
-          Your browser does not support the video tag.
-        </video>
+          onTrack={track}
+          className="h-full w-full"
+        />
       </div>
     );
   }
@@ -163,7 +161,7 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack 
 
   if (isDocxFile) {
     if (error) return <p className="p-4 text-destructive">{error}</p>;
-    if (html === null) return <p className="p-4 text-muted-foreground">Loading…</p>;
+    if (html === null) return <FileViewerLoading message="Loading document…" />;
     return (
       <div
         className="p-6 prose prose-sm dark:prose-invert max-w-none"
@@ -174,7 +172,7 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack 
 
   if (isXlsxFile) {
     if (error) return <p className="p-4 text-destructive">{error}</p>;
-    if (html === null) return <p className="p-4 text-muted-foreground">Loading…</p>;
+    if (html === null) return <FileViewerLoading message="Loading spreadsheet…" />;
     return (
       <div className="overflow-auto p-6">
         <div

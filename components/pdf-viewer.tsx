@@ -19,11 +19,16 @@ type PdfViewerProps = {
 
 type ViewMode = "single" | "all";
 
+// A4 in PDF points (72pt = 1 inch): 210mm x 297mm
+const A4_WIDTH = 595;
+
 export function PdfViewer({ url, title, withCredentials = false, onPageChange }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("single");
   const [containerWidth, setContainerWidth] = useState<number>(400);
+  const [fixedPageWidth, setFixedPageWidth] = useState<number | null>(null);
+  const fixedWidthSetRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const documentOptions = useMemo(
@@ -31,7 +36,7 @@ export function PdfViewer({ url, title, withCredentials = false, onPageChange }:
     [withCredentials]
   );
 
-  const pageWidth = Math.min(containerWidth, 800);
+  const pageWidth = fixedPageWidth ?? Math.min(containerWidth, A4_WIDTH);
 
   useEffect(() => {
     if (numPages !== null && onPageChange) {
@@ -44,12 +49,12 @@ export function PdfViewer({ url, title, withCredentials = false, onPageChange }:
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width;
-      if (typeof w === "number" && w > 0) setContainerWidth(w);
+      if (typeof w === "number" && w > 0 && fixedPageWidth === null) setContainerWidth(w);
     });
     ro.observe(el);
     setContainerWidth(el.getBoundingClientRect().width);
     return () => ro.disconnect();
-  }, []);
+  }, [fixedPageWidth]);
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-muted/30" ref={containerRef}>
@@ -108,7 +113,18 @@ export function PdfViewer({ url, title, withCredentials = false, onPageChange }:
           options={documentOptions}
           loading={<p className="text-muted-foreground">Loading PDF…</p>}
           error={<p className="text-destructive">Failed to load PDF.</p>}
-          onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+          onLoadSuccess={async (pdf) => {
+            setNumPages(pdf.numPages);
+            if (!fixedWidthSetRef.current) {
+              fixedWidthSetRef.current = true;
+              const page = await pdf.getPage(1);
+              const viewport = page.getViewport({ scale: 1 });
+              const maxW = containerRef.current
+                ? Math.min(containerRef.current.getBoundingClientRect().width - 32, 800)
+                : 800;
+              setFixedPageWidth(Math.min(viewport.width, maxW));
+            }
+          }}
           className={viewMode === "all" ? "flex flex-col items-center" : "flex justify-center"}
         >
           {viewMode === "single" ? (

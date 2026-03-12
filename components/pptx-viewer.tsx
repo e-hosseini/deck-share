@@ -10,6 +10,9 @@ type PptxViewerProps = {
   onSlideChange?: (slideIndex: number, slideCount: number) => void;
 };
 
+// A4 aspect ratio for initial dimension
+const A4_ASPECT = 595 / 842;
+
 export function PptxViewer({ url, title, withCredentials = false, onSlideChange }: PptxViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<InstanceType<typeof import("pptxviewjs").PPTXViewer> | null>(null);
@@ -17,6 +20,7 @@ export function PptxViewer({ url, title, withCredentials = false, onSlideChange 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fixedDimensions, setFixedDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +55,18 @@ export function PptxViewer({ url, title, withCredentials = false, onSlideChange 
         }
         if (cancelled) return;
         setLoading(false);
+        if (canvasRef.current && !cancelled) {
+          const c = canvasRef.current;
+          const maxW = 800;
+          let w = c.width;
+          let h = c.height;
+          if (w > maxW) {
+            const scale = maxW / w;
+            w = maxW;
+            h = Math.round(h * scale);
+          }
+          setFixedDimensions({ width: w, height: h });
+        }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Failed to load presentation");
@@ -113,11 +129,20 @@ export function PptxViewer({ url, title, withCredentials = false, onSlideChange 
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-4 flex items-center justify-center">
         {title && <span className="sr-only">{title}</span>}
-        <canvas
-          ref={canvasRef}
-          className="max-w-full border border-border bg-white shadow-sm"
-          style={{ maxHeight: "100%" }}
-        />
+        <div
+          className="flex items-center justify-center border border-border bg-white shadow-sm"
+          style={
+            fixedDimensions
+              ? { width: fixedDimensions.width, height: fixedDimensions.height, maxWidth: "100%", maxHeight: "100%" }
+              : { aspectRatio: String(A4_ASPECT), maxWidth: "100%", maxHeight: "100%" }
+          }
+        >
+          <canvas
+            ref={canvasRef}
+            className="max-w-full max-h-full"
+            style={fixedDimensions ? { width: fixedDimensions.width, height: fixedDimensions.height } : undefined}
+          />
+        </div>
         {loading && (
           <p className="absolute text-muted-foreground">Loading presentation…</p>
         )}
