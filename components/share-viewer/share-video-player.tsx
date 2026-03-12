@@ -67,19 +67,17 @@ export function ShareVideoPlayer({ src, onTrack, className }: ShareVideoPlayerPr
     };
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, []);
+  }, []  );
 
-  const handleProgressClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const v = videoRef.current;
-      if (!v || duration <= 0) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      v.currentTime = x * duration;
-      setCurrentTime(v.currentTime);
-    },
-    [duration]
-  );
+  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    const time = parseFloat(e.target.value);
+    if (!Number.isFinite(time)) return;
+    v.currentTime = time;
+    setCurrentTime(time);
+  }, []);
 
   const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
@@ -223,21 +221,30 @@ export function ShareVideoPlayer({ src, onTrack, className }: ShareVideoPlayerPr
         <div
           className={cn(
             "absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-1 bg-linear-to-t from-black/90 via-black/70 to-transparent px-3 pb-2 pt-8 transition-opacity duration-200",
-            showControls || hovering ? "opacity-100" : "opacity-0"
+            showControls || hovering ? "opacity-100" : "opacity-0 pointer-events-none"
           )}
         >
-          {/* Progress bar */}
+          {/* Progress bar - native range for reliable click/drag seeking */}
           <div
-            className="h-1.5 w-full cursor-pointer rounded-full bg-white/30 transition-colors hover:bg-white/40"
-            onClick={handleProgressClick}
-            role="progressbar"
-            aria-valuenow={duration > 0 ? (currentTime / duration) * 100 : 0}
-            aria-valuemin={0}
-            aria-valuemax={100}
+            className="flex w-full items-center py-2 -my-2"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : "0%" }}
+            <input
+              type="range"
+              min={0}
+              max={duration > 0 ? duration : 1}
+              step={0.1}
+              value={Math.min(currentTime, duration > 0 ? duration : 1)}
+              onChange={handleSeek}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              disabled={!Number.isFinite(duration) || duration <= 0}
+              className="h-2 w-full cursor-pointer accent-primary disabled:pointer-events-none disabled:opacity-50 [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-white/30 [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-white/30"
+              aria-label="Seek"
+              aria-valuemin={0}
+              aria-valuemax={duration}
+              aria-valuenow={currentTime}
             />
           </div>
 

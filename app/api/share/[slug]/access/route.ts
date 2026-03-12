@@ -92,6 +92,7 @@ export async function GET(
           }
         : null,
     siteSettings: {
+      siteDescription: siteSettings?.siteDescription ?? null,
       footerCopyright: siteSettings?.footerCopyright ?? null,
       footerLinks: Array.isArray(footerLinks) ? footerLinks : [],
       posthogProjectKey: siteSettings?.posthogProjectKey ?? null,

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { isDocx, isXlsx, isPptx } from "@/lib/file-mime";
-import { ShareVideoPlayer } from "@/components/share-viewer/share-video-player";
+import { VideoJsPlayer } from "@/components/share-viewer/videojs-player";
 
 const PdfViewer = dynamic(
   () => import("@/components/pdf-viewer").then((m) => m.PdfViewer),
@@ -132,17 +132,18 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack 
     );
   }
 
-  if (isVideo) {
-    return (
-      <div className="flex h-full min-h-0 items-center justify-center bg-muted/30 py-4">
-        <ShareVideoPlayer
-          src={url}
-          onTrack={track}
-          className="h-full w-full"
-        />
-      </div>
-    );
-  }
+if (isVideo) {
+      return (
+        <div className="flex h-full min-h-0 flex-col items-center justify-center gap-2 bg-muted/30 pt-0.5">
+          <div className="min-h-0 w-full max-w-4xl flex-1">
+            <VideoJsPlayer url={url} mimeType={mimeType} onTrack={track} />
+          </div>
+          <p className="w-full max-w-4xl truncate px-1 text-xs text-muted-foreground" title={name}>
+            {name}
+          </p>
+        </div>
+      );
+    }
 
   if (isPdf) {
     return (

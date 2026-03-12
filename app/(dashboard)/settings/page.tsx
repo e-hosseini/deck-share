@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const [ctaError, setCtaError] = useState<string | null>(null);
 
   const [websiteTitle, setWebsiteTitle] = useState("");
+  const [siteDescription, setSiteDescription] = useState("");
   const [footerCopyright, setFooterCopyright] = useState("");
   const [footerLinks, setFooterLinks] = useState<FooterLinkItem[]>([]);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -65,6 +66,7 @@ export default function SettingsPage() {
       .then((r) => r.json())
       .then((data) => {
         setWebsiteTitle(data.websiteTitle ?? "");
+        setSiteDescription(data.siteDescription ?? "");
         setFooterCopyright(data.footerCopyright ?? "");
         setFooterLinks(Array.isArray(data.footerLinks) ? data.footerLinks : []);
         setPosthogProjectKey(data.posthogProjectKey ?? "");
@@ -168,6 +170,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           websiteTitle: websiteTitle.trim() || null,
+          siteDescription: siteDescription.trim() || null,
           footerCopyright: footerCopyright.trim() || null,
           footerLinks: footerLinks.filter((x) => x.label.trim() && x.url.trim()),
           posthogProjectKey: posthogProjectKey.trim() || null,
@@ -202,6 +205,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           websiteTitle: websiteTitle.trim() || null,
+          siteDescription: siteDescription.trim() || null,
           footerCopyright: footerCopyright.trim() || null,
           footerLinks: footerLinks.filter((x) => x.label.trim() && x.url.trim()),
           posthogProjectKey: posthogProjectKey.trim() || null,
@@ -345,6 +349,18 @@ export default function SettingsPage() {
                     onChange={(e) => setWebsiteTitle(e.target.value)}
                     placeholder="e.g. Deck Share"
                     disabled={siteLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="site-description">Site description</Label>
+                  <textarea
+                    id="site-description"
+                    value={siteDescription}
+                    onChange={(e) => setSiteDescription(e.target.value)}
+                    placeholder="Short description shown on share pages (e.g. under the header)"
+                    disabled={siteLoading}
+                    rows={2}
+                    className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
                 <div className="space-y-2">

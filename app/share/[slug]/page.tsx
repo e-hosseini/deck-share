@@ -48,6 +48,7 @@ type ShareData = {
     linkLabel: string | null;
   } | null;
   siteSettings: {
+    siteDescription: string | null;
     footerCopyright: string | null;
     footerLinks: { label: string; url: string }[];
     posthogProjectKey: string | null;
@@ -94,8 +95,11 @@ export default function SharePage() {
   const [singleUseExhausted, setSingleUseExhausted] = useState(false);
   const [openFile, setOpenFile] = useState<FileRef | null>(null);
   const [shareFile, setShareFile] = useState<FileRef | null>(null);
-  const [directoryStack, setDirectoryStack] = useState<{ id: string; name: string }[]>([]);
-  const [directoryContents, setDirectoryContents] = useState<DirectoryContents | null>(null);
+  const [directoryStack, setDirectoryStack] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [directoryContents, setDirectoryContents] =
+    useState<DirectoryContents | null>(null);
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [ctaModalOpen, setCtaModalOpen] = useState(false);
   const fingerprint = getFingerprint();
@@ -105,7 +109,7 @@ export default function SharePage() {
       action: string,
       resourceType?: string,
       resourceId?: string,
-      metadata?: Record<string, unknown>
+      metadata?: Record<string, unknown>,
     ) => {
       try {
         const res = await fetch("/api/track", {
@@ -126,7 +130,7 @@ export default function SharePage() {
         // ignore
       }
     },
-    [slug, fingerprint]
+    [slug, fingerprint],
   );
 
   useEffect(() => {
@@ -140,9 +144,7 @@ export default function SharePage() {
     if (!data || !fileIdFromUrl || hasAppliedFileUrlRef.current) return;
     hasAppliedFileUrlRef.current = true;
     const deck = data.deck;
-    const inDeck = deck.items.find(
-      (item) => item.file?.id === fileIdFromUrl
-    );
+    const inDeck = deck.items.find((item) => item.file?.id === fileIdFromUrl);
     if (inDeck?.file) {
       setOpenFile({
         fileId: inDeck.file.id,
@@ -193,7 +195,19 @@ export default function SharePage() {
           setLoading(false);
           return;
         }
-        setData({ share: json.share, deck: json.deck, cta: json.cta ?? null, siteSettings: json.siteSettings ?? { footerCopyright: null, footerLinks: [], posthogProjectKey: null, posthogHost: null, logoUrl: null } });
+        setData({
+          share: json.share,
+          deck: json.deck,
+          cta: json.cta ?? null,
+          siteSettings: json.siteSettings ?? {
+            siteDescription: null,
+            footerCopyright: null,
+            footerLinks: [],
+            posthogProjectKey: null,
+            posthogHost: null,
+            logoUrl: null,
+          },
+        });
         setLoading(false);
         track("page_view");
       })
@@ -238,7 +252,8 @@ export default function SharePage() {
     import("posthog-js").then(({ default: posthog }) => {
       if (cancelled) return;
       posthog.init(key, {
-        api_host: data.siteSettings.posthogHost?.trim() || "https://us.i.posthog.com",
+        api_host:
+          data.siteSettings.posthogHost?.trim() || "https://us.i.posthog.com",
         person_profiles: "identified_only",
       });
     });
@@ -252,14 +267,20 @@ export default function SharePage() {
   const lastLeaveAtRef = useRef<number>(0);
   useEffect(() => {
     if (!data || typeof document === "undefined") return;
-    function sendBeaconTrack(action: string, metadata?: Record<string, unknown>) {
+    function sendBeaconTrack(
+      action: string,
+      metadata?: Record<string, unknown>,
+    ) {
       const payload = JSON.stringify({
         slug,
         fingerprint,
         action,
         metadata,
       });
-      navigator.sendBeacon("/api/track", new Blob([payload], { type: "application/json" }));
+      navigator.sendBeacon(
+        "/api/track",
+        new Blob([payload], { type: "application/json" }),
+      );
     }
     function sendVisitLeave() {
       const now = Date.now();
@@ -271,9 +292,14 @@ export default function SharePage() {
       if (document.visibilityState === "hidden") {
         wasHiddenRef.current = true;
         sendVisitLeave();
-      } else if (document.visibilityState === "visible" && wasHiddenRef.current) {
+      } else if (
+        document.visibilityState === "visible" &&
+        wasHiddenRef.current
+      ) {
         wasHiddenRef.current = false;
-        track("visit_return", undefined, undefined, { at: new Date().toISOString() });
+        track("visit_return", undefined, undefined, {
+          at: new Date().toISOString(),
+        });
       }
     }
     function onPageHide() {
@@ -303,7 +329,19 @@ export default function SharePage() {
     setNeedsPassword(false);
     const accessRes = await fetch(`/api/share/${slug}/access`);
     const accessJson = await accessRes.json();
-    setData({ share: accessJson.share, deck: accessJson.deck, cta: accessJson.cta ?? null, siteSettings: accessJson.siteSettings ?? { footerCopyright: null, footerLinks: [], posthogProjectKey: null, posthogHost: null, logoUrl: null } });
+    setData({
+      share: accessJson.share,
+      deck: accessJson.deck,
+      cta: accessJson.cta ?? null,
+      siteSettings: accessJson.siteSettings ?? {
+        siteDescription: null,
+        footerCopyright: null,
+        footerLinks: [],
+        posthogProjectKey: null,
+        posthogHost: null,
+        logoUrl: null,
+      },
+    });
     track("page_view");
   }
 
@@ -355,13 +393,16 @@ export default function SharePage() {
   if (singleUseExhausted) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">This link has already been used.</p>
+        <p className="text-muted-foreground">
+          This link has already been used.
+        </p>
       </div>
     );
   }
 
   const { share, deck, cta } = data;
-  const { footerCopyright, footerLinks, logoUrl } = data.siteSettings;
+  const { siteDescription, footerCopyright, footerLinks, logoUrl } =
+    data.siteSettings;
   const isInDirectory = directoryStack.length > 0;
   const singleFile =
     deck.items.length === 1 &&
@@ -379,7 +420,7 @@ export default function SharePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background container max-w-3xl m-auto">
+    <div className="min-h-screen flex flex-col bg-background container max-w-3xl m-auto text-xs">
       {/* Top: menu / header */}
       <header className="shrink-0 border-b bg-background">
         <div className="flex flex-wrap items-start justify-between gap-4 p-4">
@@ -392,15 +433,33 @@ export default function SharePage() {
                   className="h-8 shrink-0 object-contain"
                 />
               )}
-              <h1 className="text-2xl font-semibold">{share.title}</h1>
+              <div>
+                <h1 className="text-2xl font-semibold">{share.title}</h1>
+                {siteDescription && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {siteDescription}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
           {cta && cta.title && cta.link && (
             <Button
               variant="default"
               onClick={() => {
-                track("cta_modal_opened", "cta", undefined, { ctaTitle: cta.title });
-                setCtaModalOpen(true);
+                const hasDescription = !!cta.description?.trim();
+                if (hasDescription) {
+                  track("cta_modal_opened", "cta", undefined, {
+                    ctaTitle: cta.title,
+                  });
+                  setCtaModalOpen(true);
+                } else {
+                  track("cta_modal_link_clicked", "cta", undefined, {
+                    link: cta.link,
+                    linkLabel: cta.linkLabel ?? undefined,
+                  });
+                  if (cta.link) window.open(cta.link, "_blank", "noopener,noreferrer");
+                }
               }}
               className="shrink-0"
             >
@@ -412,7 +471,7 @@ export default function SharePage() {
 
       {/* Middle: file/dir browser (scrollable) or single file viewer */}
       <main className="flex-1 min-h-0 flex flex-col overflow-auto">
-        <div className="p-4 pb-0">
+        <div className="p-2 pb-0">
           {!singleFile && isInDirectory && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <ChevronRight className="size-4 text-muted-foreground" />
@@ -436,28 +495,18 @@ export default function SharePage() {
             </div>
           )}
         </div>
-        <div className=" p-4">
+        <div className=" p-4 pt-0">
           {openFile ? (
             <div className="flex h-full min-h-0 flex-col">
-              <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
+              <div className="flex shrink-0 items-center justify-between gap-2">
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="gap-1 -ml-2"
+                  size="xs"
+                  className="gap-1 mb-1 "
                   onClick={() => setOpenFile(null)}
                 >
                   <ArrowLeft className="size-4" />
                   Back to list
-                </Button>
-                <span className="truncate text-sm text-muted-foreground">{openFile.name}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={() => setOpenFile(null)}
-                  aria-label="Close"
-                >
-                  <X className="size-4" />
                 </Button>
               </div>
               <div className="min-h-0 flex-1">
@@ -466,7 +515,9 @@ export default function SharePage() {
                   fileId={openFile.fileId}
                   name={openFile.name}
                   mimeType={openFile.mimeType}
-                  onTrackOpen={() => track("file_open", "file", openFile.fileId)}
+                  onTrackOpen={() =>
+                    track("file_open", "file", openFile.fileId)
+                  }
                   onTrack={track}
                 />
               </div>
@@ -520,10 +571,17 @@ export default function SharePage() {
                     }
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <FileTypeIcon mimeType={file.mimeType} name={file.name} className="size-4 shrink-0" />
+                      <FileTypeIcon
+                        mimeType={file.mimeType}
+                        name={file.name}
+                        className="size-4 shrink-0"
+                      />
                       <span className="truncate">{file.name}</span>
                     </div>
-                    <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="flex shrink-0 gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Button
                         variant="outline"
                         size="sm"
@@ -559,11 +617,11 @@ export default function SharePage() {
               <p className="text-muted-foreground">Unable to load directory.</p>
             )
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-0.5">
               {deck.items.map((item) => (
                 <li
                   key={item.id}
-                  className={`flex items-center justify-between gap-4 rounded-md border p-3 ${item.file || item.directory ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                  className={`flex items-center justify-between gap-4 rounded-md border py-1 px-3 ${item.file || item.directory ? "cursor-pointer hover:bg-muted/50" : ""}`}
                   onClick={() => {
                     if (item.file) {
                       setOpenFile({
@@ -579,7 +637,11 @@ export default function SharePage() {
                   <div className="flex min-w-0 items-center gap-2">
                     {item.file ? (
                       <>
-                        <FileTypeIcon mimeType={item.file.mimeType} name={item.file.name} className="size-4 shrink-0" />
+                        <FileTypeIcon
+                          mimeType={item.file.mimeType}
+                          name={item.file.name}
+                          className="size-4 shrink-0"
+                        />
                         <span className="truncate">{item.file.name}</span>
                       </>
                     ) : item.directory ? (
@@ -589,12 +651,15 @@ export default function SharePage() {
                       </>
                     ) : null}
                   </div>
-                  <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex shrink-0 gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {item.file && (
                       <>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="xs"
                           onClick={() =>
                             setOpenFile({
                               fileId: item.file!.id,
@@ -607,7 +672,7 @@ export default function SharePage() {
                         </Button>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="xs"
                           onClick={() =>
                             setShareFile({
                               fileId: item.file!.id,
@@ -626,7 +691,10 @@ export default function SharePage() {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          enterDirectory(item.directory!.id, item.directory!.name)
+                          enterDirectory(
+                            item.directory!.id,
+                            item.directory!.name,
+                          )
                         }
                       >
                         Open
@@ -642,9 +710,7 @@ export default function SharePage() {
         {(share.descriptionRichText || share.targetLink) && (
           <div className="border-t px-4 py-4">
             {share.descriptionRichText && (
-              <RichTextWithEmbeds
-                html={share.descriptionRichText}
-              />
+              <RichTextWithEmbeds html={share.descriptionRichText} />
             )}
             {share.targetLink && (
               <a
@@ -681,7 +747,10 @@ export default function SharePage() {
           )}
         </footer>
       )}
-      <Dialog open={!!shareFile} onOpenChange={(open) => !open && setShareFile(null)}>
+      <Dialog
+        open={!!shareFile}
+        onOpenChange={(open) => !open && setShareFile(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Share file link</DialogTitle>
@@ -692,28 +761,29 @@ export default function SharePage() {
           </DialogHeader>
           {shareFile && (
             <div className="space-y-3">
-              <div className="rounded-md bg-muted p-3 font-mono text-sm break-all">
+              <div className="rounded-md bg-muted p-3 font-mono text-xs break-all">
                 {typeof window !== "undefined"
                   ? `${window.location.origin}/share/${slug}?file=${shareFile.fileId}`
                   : ""}
               </div>
-              <Button
-                onClick={() => {
-                  if (!shareFile) return;
-                  const url = `${window.location.origin}/share/${slug}?file=${shareFile.fileId}`;
-                  navigator.clipboard.writeText(url).then(
-                    () => toast.success("Link copied to clipboard"),
-                    () => {}
-                  );
-                  track("file_share_link_copied", "file", shareFile.fileId);
-                }}
-              >
-                <Copy className="mr-2 size-4" />
-                Copy link
-              </Button>
             </div>
           )}
           <DialogFooter>
+            <Button
+              onClick={() => {
+                if (!shareFile) return;
+                const url = `${window.location.origin}/share/${slug}?file=${shareFile.fileId}`;
+                navigator.clipboard.writeText(url).then(
+                  () => toast.success("Link copied to clipboard"),
+                  () => {},
+                );
+                toast.success("Link copied to clipboard");
+                track("file_share_link_copied", "file", shareFile.fileId);
+              }}
+            >
+              <Copy className="mr-2 size-4" />
+              Copy link
+            </Button>
             <Button variant="outline" onClick={() => setShareFile(null)}>
               Close
             </Button>
@@ -721,10 +791,14 @@ export default function SharePage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={ctaModalOpen} onOpenChange={(open) => {
-        setCtaModalOpen(open);
-        if (!open) track("cta_modal_closed", "cta", undefined, { action: "close" });
-      }}>
+      <Dialog
+        open={ctaModalOpen}
+        onOpenChange={(open) => {
+          setCtaModalOpen(open);
+          if (!open)
+            track("cta_modal_closed", "cta", undefined, { action: "close" });
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{cta?.title ?? "Call to action"}</DialogTitle>
@@ -735,16 +809,16 @@ export default function SharePage() {
             )}
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCtaModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setCtaModalOpen(false)}>
               Close
             </Button>
             <Button
               onClick={() => {
                 if (cta?.link) {
-                  track("cta_modal_link_clicked", "cta", undefined, { link: cta.link, linkLabel: cta.linkLabel ?? undefined });
+                  track("cta_modal_link_clicked", "cta", undefined, {
+                    link: cta.link,
+                    linkLabel: cta.linkLabel ?? undefined,
+                  });
                   window.open(cta.link, "_blank", "noopener,noreferrer");
                 }
                 setCtaModalOpen(false);

@@ -127,6 +127,7 @@ model GlobalCta {
 model SiteSettings {
   id                String   @id @default(cuid())
   websiteTitle      String?  @map("website_title")
+  siteDescription   String?  @map("site_description") @db.Text
   footerCopyright   String?  @map("footer_copyright") @db.Text
   footerLinks       Json?    @map("footer_links") // [{ label: string, url: string }]
   logoStorageKey    String?  @map("logo_storage_key")

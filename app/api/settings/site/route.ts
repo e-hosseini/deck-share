@@ -12,6 +12,7 @@ export async function GET() {
   const hasLogo = !!(row?.logoStorageKey && row?.logoMimeType);
   return NextResponse.json({
     websiteTitle: row?.websiteTitle ?? null,
+    siteDescription: row?.siteDescription ?? null,
     footerCopyright: row?.footerCopyright ?? null,
     footerLinks: Array.isArray(footerLinks) ? footerLinks : [],
     posthogProjectKey: row?.posthogProjectKey ?? null,
@@ -28,12 +29,14 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const {
     websiteTitle,
+    siteDescription,
     footerCopyright,
     footerLinks,
     posthogProjectKey,
     posthogHost,
   } = body as {
     websiteTitle?: string | null;
+    siteDescription?: string | null;
     footerCopyright?: string | null;
     footerLinks?: FooterLink[] | null;
     posthogProjectKey?: string | null;
@@ -44,6 +47,10 @@ export async function PATCH(req: NextRequest) {
     websiteTitle:
       websiteTitle != null && websiteTitle !== ""
         ? String(websiteTitle).trim()
+        : null,
+    siteDescription:
+      siteDescription != null && siteDescription !== ""
+        ? String(siteDescription).trim()
         : null,
     footerCopyright:
       footerCopyright != null && footerCopyright !== ""
@@ -84,6 +91,7 @@ export async function PATCH(req: NextRequest) {
   const links = (row.footerLinks as FooterLink[]) ?? [];
   return NextResponse.json({
     websiteTitle: row.websiteTitle,
+    siteDescription: row.siteDescription,
     footerCopyright: row.footerCopyright,
     footerLinks: Array.isArray(links) ? links : [],
     posthogProjectKey: row.posthogProjectKey,
