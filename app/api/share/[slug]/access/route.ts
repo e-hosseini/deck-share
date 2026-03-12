@@ -54,7 +54,7 @@ export async function GET(
   if (share.passwordHash && !hasAuth) {
     return NextResponse.json({
       needsPassword: true,
-      title: share.title,
+      title: share.deck.name,
     });
   }
 
@@ -70,8 +70,8 @@ export async function GET(
   const response = NextResponse.json({
     share: {
       id: share.id,
-      title: share.title,
-      descriptionRichText: share.descriptionRichText,
+      title: share.deck.name,
+      descriptionRichText: share.deck.description,
       audienceName: share.audienceName,
       targetLink: share.targetLink,
       contactEmail: share.contactEmail,

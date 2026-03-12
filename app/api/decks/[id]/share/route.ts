@@ -21,8 +21,6 @@ export async function POST(
   }
   const body = await req.json();
   const {
-    title,
-    descriptionRichText,
     audienceName,
     expiresAt,
     targetLink,
@@ -30,8 +28,6 @@ export async function POST(
     password,
     singleUse,
   } = body as {
-    title?: string;
-    descriptionRichText?: string;
     audienceName?: string;
     expiresAt?: string;
     targetLink?: string;
@@ -40,7 +36,6 @@ export async function POST(
     singleUse?: boolean;
   };
 
-  const trimmedTitle = title?.trim() ?? "";
   const trimmedAudience = audienceName?.trim() ?? "";
   const expiryInput = expiresAt?.trim();
   const expiresAtDate = expiryInput
@@ -61,8 +56,6 @@ export async function POST(
     data: {
       deckId,
       slug,
-      title: trimmedTitle || "Share",
-      descriptionRichText: descriptionRichText?.trim() || null,
       audienceName: trimmedAudience || "Audience",
       expiresAt: expiresAtDate,
       targetLink: targetLink?.trim() || null,
@@ -76,7 +69,7 @@ export async function POST(
     share: {
       id: share.id,
       slug: share.slug,
-      title: share.title,
+      title: deck.name,
       expiresAt: share.expiresAt,
     },
   });

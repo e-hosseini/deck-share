@@ -13,7 +13,7 @@ export async function GET(
   const { id: shareId, visitorId } = await params;
   const share = await prisma.share.findFirst({
     where: { id: shareId, createdById: session.user.id },
-    select: { id: true, slug: true, title: true, deck: { select: { name: true } } },
+    select: { id: true, slug: true, deck: { select: { name: true } } },
   });
   if (!share) {
     return NextResponse.json({ error: "Share not found" }, { status: 404 });
@@ -75,7 +75,7 @@ export async function GET(
     share: {
       id: share.id,
       slug: share.slug,
-      title: share.title,
+      title: share.deck.name,
       deck: share.deck,
     },
     visitor: {

@@ -44,13 +44,37 @@ export async function PATCH(
   if (!deck) {
     return NextResponse.json({ error: "Deck not found" }, { status: 404 });
   }
-  const body = await req.json();
-  const { name, description } = body as { name?: string; description?: string };
+  let body: { name?: string; description?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const { name, description } = body;
+  if (name !== undefined && typeof name !== "string") {
+    return NextResponse.json({ error: "name must be a string" }, { status: 400 });
+  }
+  if (description !== undefined && description !== null && typeof description !== "string") {
+    return NextResponse.json({ error: "description must be a string or null" }, { status: 400 });
+  }
+  const trimmedName = name !== undefined ? name.trim() : undefined;
+  if (trimmedName !== undefined && trimmedName.length === 0) {
+    return NextResponse.json({ error: "name cannot be empty" }, { status: 400 });
+  }
   const updated = await prisma.deck.update({
     where: { id },
     data: {
-      ...(name !== undefined && { name: name.trim() }),
+      ...(trimmedName !== undefined && { name: trimmedName }),
       ...(description !== undefined && { description: description?.trim() ?? null }),
+    },
+    include: {
+      items: {
+        orderBy: { order: "asc" },
+        include: {
+          file: true,
+          directory: true,
+        },
+      },
     },
   });
   return NextResponse.json({ deck: updated });

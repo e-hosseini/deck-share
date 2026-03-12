@@ -53,7 +53,7 @@ export async function GET(
     share: {
       id: share.id,
       slug: share.slug,
-      title: share.title,
+      title: share.deck.name,
       audienceName: share.audienceName,
       expiresAt: share.expiresAt,
       deck: share.deck,
