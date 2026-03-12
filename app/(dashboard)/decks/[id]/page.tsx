@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AddFromFilesDialog } from "@/components/deck-builder/add-from-files-dialog";
+import { ShareDeckSheet } from "@/components/share-form/share-deck-sheet";
 import { Folder, Trash2, Share2, ArrowLeft, History } from "lucide-react";
 import { FileTypeIcon } from "@/components/file-type-icon";
 
@@ -52,10 +53,12 @@ type HistoryEntry = {
 export default function DeckDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const [deck, setDeck] = useState<Deck | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -79,6 +82,13 @@ export default function DeckDetailPage() {
   useEffect(() => {
     refresh();
   }, [id]);
+
+  useEffect(() => {
+    if (searchParams.get("share") === "open") {
+      setShareSheetOpen(true);
+      router.replace(`/decks/${id}`, { scroll: false });
+    }
+  }, [id, searchParams, router]);
 
   async function removeItem(itemId: string) {
     if (!confirm("Remove this item from the deck?")) return;
@@ -140,11 +150,9 @@ export default function DeckDetailPage() {
           <Button variant="outline" onClick={() => setAddDialogOpen(true)}>
             Add from files
           </Button>
-          <Button asChild>
-            <Link href={`/decks/${id}/share`}>
-              <Share2 className="size-4 mr-2" />
-              Share
-            </Link>
+          <Button onClick={() => setShareSheetOpen(true)}>
+            <Share2 className="size-4 mr-2" />
+            Share
           </Button>
         </div>
       </div>
@@ -262,6 +270,11 @@ export default function DeckDetailPage() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAdd={handleAdd}
+      />
+      <ShareDeckSheet
+        deckId={id}
+        open={shareSheetOpen}
+        onOpenChange={setShareSheetOpen}
       />
     </div>
   );

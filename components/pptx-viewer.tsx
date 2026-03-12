@@ -7,9 +7,10 @@ type PptxViewerProps = {
   url: string;
   title?: string;
   withCredentials?: boolean;
+  onSlideChange?: (slideIndex: number, slideCount: number) => void;
 };
 
-export function PptxViewer({ url, title, withCredentials = false }: PptxViewerProps) {
+export function PptxViewer({ url, title, withCredentials = false, onSlideChange }: PptxViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<InstanceType<typeof import("pptxviewjs").PPTXViewer> | null>(null);
   const [slideCount, setSlideCount] = useState(0);
@@ -41,6 +42,7 @@ export function PptxViewer({ url, title, withCredentials = false }: PptxViewerPr
         const count = viewer.getSlideCount();
         setSlideCount(count);
         setCurrentSlide(0);
+        if (onSlideChange) onSlideChange(0, count);
 
         const canvas = canvasRef.current;
         if (canvas) {
@@ -71,6 +73,7 @@ export function PptxViewer({ url, title, withCredentials = false }: PptxViewerPr
     if (!viewer || !canvas || index < 0 || index >= slideCount) return;
     setCurrentSlide(index);
     await viewer.goToSlide(index, canvas);
+    if (onSlideChange) onSlideChange(index, slideCount);
   };
 
   if (error) {

@@ -13,6 +13,7 @@ type FullscreenShareFileViewerProps = {
   mimeType: string;
   onClose: () => void;
   onTrackOpen: () => void;
+  onTrack?: (action: string, resourceType?: string, resourceId?: string, metadata?: Record<string, unknown>) => void;
 };
 
 export function FullscreenShareFileViewer({
@@ -22,6 +23,7 @@ export function FullscreenShareFileViewer({
   mimeType,
   onClose,
   onTrackOpen,
+  onTrack,
 }: FullscreenShareFileViewerProps) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -66,6 +68,7 @@ export function FullscreenShareFileViewer({
             name={name}
             mimeType={mimeType}
             onTrackOpen={onTrackOpen}
+            onTrack={onTrack}
           />
         </div>
       </div>

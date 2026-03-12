@@ -19,7 +19,7 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const email = process.env.SEED_EMAIL ?? "admin@example.com";
+  const email = process.env.SEED_EMAIL ?? "admin2@example.com";
   const password = process.env.SEED_PASSWORD ?? "admin123";
 
   const existing = await prisma.user.findUnique({ where: { email } });

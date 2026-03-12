@@ -39,12 +39,17 @@ export async function POST(
     password?: string;
     singleUse?: boolean;
   };
-  if (!title?.trim() || !audienceName?.trim() || !expiresAt) {
-    return NextResponse.json(
-      { error: "Title, audience name, and expiry date are required" },
-      { status: 400 }
-    );
-  }
+
+  const trimmedTitle = title?.trim() ?? "";
+  const trimmedAudience = audienceName?.trim() ?? "";
+  const expiryInput = expiresAt?.trim();
+  const expiresAtDate = expiryInput
+    ? new Date(expiryInput)
+    : (() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() + 1);
+        return d;
+      })();
   const slug = await generateUniqueSlug(async (s) => {
     const existing = await prisma.share.findUnique({ where: { slug: s } });
     return !!existing;
@@ -56,10 +61,10 @@ export async function POST(
     data: {
       deckId,
       slug,
-      title: title.trim(),
+      title: trimmedTitle || "Share",
       descriptionRichText: descriptionRichText?.trim() || null,
-      audienceName: audienceName.trim(),
-      expiresAt: new Date(expiresAt),
+      audienceName: trimmedAudience || "Audience",
+      expiresAt: expiresAtDate,
       targetLink: targetLink?.trim() || null,
       contactEmail: contactEmail?.trim() || null,
       passwordHash,

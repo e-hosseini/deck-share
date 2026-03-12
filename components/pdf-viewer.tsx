@@ -14,11 +14,12 @@ type PdfViewerProps = {
   url: string;
   title?: string;
   withCredentials?: boolean;
+  onPageChange?: (pageNumber: number, numPages: number) => void;
 };
 
 type ViewMode = "single" | "all";
 
-export function PdfViewer({ url, title, withCredentials = false }: PdfViewerProps) {
+export function PdfViewer({ url, title, withCredentials = false, onPageChange }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("single");
@@ -31,6 +32,12 @@ export function PdfViewer({ url, title, withCredentials = false }: PdfViewerProp
   );
 
   const pageWidth = Math.min(containerWidth, 800);
+
+  useEffect(() => {
+    if (numPages !== null && onPageChange) {
+      onPageChange(pageNumber, numPages);
+    }
+  }, [pageNumber, numPages, onPageChange]);
 
   useEffect(() => {
     const el = containerRef.current;

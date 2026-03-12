@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { isDocx, isXlsx, isPptx } from "@/lib/file-mime";
 
@@ -14,22 +14,39 @@ const PptxViewer = dynamic(
   { ssr: false }
 );
 
+export type TrackPayload = {
+  action: string;
+  resourceType?: string;
+  resourceId?: string;
+  metadata?: Record<string, unknown>;
+};
+
 type FileViewerProps = {
   slug: string;
   fileId: string;
   name: string;
   mimeType: string;
   onTrackOpen: () => void;
+  onTrack?: (action: string, resourceType?: string, resourceId?: string, metadata?: Record<string, unknown>) => void;
 };
 
-export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen }: FileViewerProps) {
+export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack }: FileViewerProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const url = `/api/share/${slug}/file/${fileId}`;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const progressTrackedRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     onTrackOpen();
   }, [slug, fileId, onTrackOpen]);
+
+  const track = useCallback(
+    (action: string, metadata?: Record<string, unknown>) => {
+      onTrack?.(action, "file", fileId, metadata);
+    },
+    [onTrack, fileId]
+  );
 
   const isPdf = mimeType === "application/pdf";
   const isImage = mimeType.startsWith("image/");
@@ -90,7 +107,39 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen }: FileVi
   if (isVideo) {
     return (
       <div className="flex h-full min-h-0 bg-muted/30 p-4">
-        <video controls className="h-full w-full" src={url}>
+        <video
+          ref={videoRef}
+          controls
+          className="h-full w-full"
+          src={url}
+          onPlay={() => {
+            progressTrackedRef.current.clear();
+            track("video_play");
+          }}
+          onPause={() => {
+            const v = videoRef.current;
+            track("video_pause", v ? { currentTime: v.currentTime, duration: v.duration } : undefined);
+          }}
+          onEnded={() => {
+            const v = videoRef.current;
+            track("video_ended", v ? { duration: v.duration } : undefined);
+          }}
+          onTimeUpdate={() => {
+            const v = videoRef.current;
+            if (!v || v.duration <= 0 || !onTrack) return;
+            const percent = Math.floor((v.currentTime / v.duration) * 100);
+            const milestones = [25, 50, 75, 100];
+            const hit = milestones.find((m) => percent >= m && !progressTrackedRef.current.has(m));
+            if (hit !== undefined) {
+              progressTrackedRef.current.add(hit);
+              track("video_progress", {
+                percent: hit,
+                currentTime: v.currentTime,
+                duration: v.duration,
+              });
+            }
+          }}
+        >
           Your browser does not support the video tag.
         </video>
       </div>
@@ -100,7 +149,14 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen }: FileVi
   if (isPdf) {
     return (
       <div className="h-full min-h-0 w-full">
-        <PdfViewer url={url} title={name} withCredentials />
+        <PdfViewer
+          url={url}
+          title={name}
+          withCredentials
+          onPageChange={(pageNumber, numPages) =>
+            track("pdf_page_view", { pageNumber, numPages })
+          }
+        />
       </div>
     );
   }
@@ -132,7 +188,14 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen }: FileVi
   if (isPptxFile) {
     return (
       <div className="h-full min-h-0 w-full">
-        <PptxViewer url={url} title={name} withCredentials />
+        <PptxViewer
+          url={url}
+          title={name}
+          withCredentials
+          onSlideChange={(slideIndex, slideCount) =>
+            track("pptx_slide_view", { slideIndex, slideCount })
+          }
+        />
       </div>
     );
   }

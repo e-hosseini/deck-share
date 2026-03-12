@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FullscreenShareFileViewer } from "@/components/share-viewer/fullscreen-share-file-viewer";
+import { FileViewer } from "@/components/share-viewer/file-viewer";
 import { Folder, Download, ChevronRight, ArrowLeft } from "lucide-react";
 import { FileTypeIcon } from "@/components/file-type-icon";
 
@@ -98,7 +99,12 @@ export default function SharePage() {
   const fingerprint = getFingerprint();
 
   const track = useCallback(
-    async (action: string, resourceType?: string, resourceId?: string) => {
+    async (
+      action: string,
+      resourceType?: string,
+      resourceId?: string,
+      metadata?: Record<string, unknown>
+    ) => {
       try {
         const res = await fetch("/api/track", {
           method: "POST",
@@ -109,6 +115,7 @@ export default function SharePage() {
             action,
             resourceType,
             resourceId,
+            metadata,
           }),
         });
         const json = await res.json();
@@ -265,6 +272,11 @@ export default function SharePage() {
   const { share, deck, cta } = data;
   const { footerCopyright, footerLinks, logoUrl } = data.siteSettings;
   const isInDirectory = directoryStack.length > 0;
+  const singleFile =
+    deck.items.length === 1 &&
+    deck.items[0].file !== null &&
+    deck.items[0].directory === null;
+  const theFile = singleFile ? deck.items[0].file! : null;
 
   function enterDirectory(id: string, name: string) {
     track("directory_open", "directory", id);
@@ -320,10 +332,10 @@ export default function SharePage() {
         </div>
       </header>
 
-      {/* Middle: file/dir browser (scrollable) */}
+      {/* Middle: file/dir browser (scrollable) or single file viewer */}
       <main className="flex-1 min-h-0 flex flex-col overflow-auto">
         <div className="p-4 pb-0">
-          {isInDirectory && (
+          {!singleFile && isInDirectory && (
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <ChevronRight className="size-4 text-muted-foreground" />
               <nav className="flex items-center gap-2 text-sm">
@@ -347,7 +359,16 @@ export default function SharePage() {
           )}
         </div>
         <div className="flex-1 p-4">
-          {isInDirectory ? (
+          {singleFile && theFile ? (
+            <FileViewer
+              slug={slug}
+              fileId={theFile.id}
+              name={theFile.name}
+              mimeType={theFile.mimeType}
+              onTrackOpen={() => track("file_open", "file", theFile.id)}
+              onTrack={track}
+            />
+          ) : isInDirectory ? (
             directoryLoading ? (
               <p className="text-muted-foreground">Loading…</p>
             ) : directoryContents ? (
@@ -533,6 +554,7 @@ export default function SharePage() {
           mimeType={openFile.mimeType}
           onClose={() => setOpenFile(null)}
           onTrackOpen={() => track("file_open", "file", openFile.fileId)}
+          onTrack={track}
         />
       )}
 
