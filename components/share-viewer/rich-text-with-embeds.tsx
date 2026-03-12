@@ -30,7 +30,7 @@ export function RichTextWithEmbeds({
     if (container.hasAttribute(PROCESSED)) return;
 
     const EXECUTED = "data-embed-executed";
-    const scripts = container.querySelectorAll(`script:not([${EXECUTED}])`);
+    const scripts = container.querySelectorAll<HTMLScriptElement>(`script:not([${EXECUTED}])`);
     const scriptLoadPromises: Promise<void>[] = [];
     scripts.forEach((oldScript) => {
       const newScript = document.createElement("script");

@@ -159,8 +159,9 @@ export function ShareVideoPlayer({ src, onTrack, className }: ShareVideoPlayerPr
           onCanPlay={() => setLoading(false)}
           onLoadedMetadata={() => {
             const v = videoRef.current;
-            if (v && v.videoWidth && v.videoHeight) {
-              setVideoAspect(v.videoWidth / v.videoHeight);
+            if (v) {
+              if (v.videoWidth && v.videoHeight) setVideoAspect(v.videoWidth / v.videoHeight);
+              setDuration(v.duration);
             }
           }}
           onEnded={() => {
@@ -189,10 +190,6 @@ export function ShareVideoPlayer({ src, onTrack, className }: ShareVideoPlayerPr
             }
           }}
           onDurationChange={() => {
-            const v = videoRef.current;
-            if (v) setDuration(v.duration);
-          }}
-          onLoadedMetadata={() => {
             const v = videoRef.current;
             if (v) setDuration(v.duration);
           }}
