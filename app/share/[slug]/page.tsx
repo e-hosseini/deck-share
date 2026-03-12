@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FullscreenShareFileViewer } from "@/components/share-viewer/fullscreen-share-file-viewer";
 import { FileViewer } from "@/components/share-viewer/file-viewer";
-import { Folder, Download, ChevronRight, ArrowLeft } from "lucide-react";
+import { RichTextWithEmbeds } from "@/components/share-viewer/rich-text-with-embeds";
+import { Folder, Share2, ChevronRight, ArrowLeft, X, Copy } from "lucide-react";
 import { FileTypeIcon } from "@/components/file-type-icon";
+import { toast } from "sonner";
 
 type DeckItem = {
   id: string;
@@ -83,6 +84,7 @@ function getFingerprint(): string {
 
 export default function SharePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
   const [data, setData] = useState<ShareData | null>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
@@ -91,7 +93,7 @@ export default function SharePage() {
   const [loading, setLoading] = useState(true);
   const [singleUseExhausted, setSingleUseExhausted] = useState(false);
   const [openFile, setOpenFile] = useState<FileRef | null>(null);
-  const [downloadFile, setDownloadFile] = useState<FileRef | null>(null);
+  const [shareFile, setShareFile] = useState<FileRef | null>(null);
   const [directoryStack, setDirectoryStack] = useState<{ id: string; name: string }[]>([]);
   const [directoryContents, setDirectoryContents] = useState<DirectoryContents | null>(null);
   const [directoryLoading, setDirectoryLoading] = useState(false);
@@ -126,6 +128,55 @@ export default function SharePage() {
     },
     [slug, fingerprint]
   );
+
+  useEffect(() => {
+    if (shareFile) track("file_share_dialog_opened", "file", shareFile.fileId);
+  }, [shareFile, track]);
+
+  // Open file from URL ?file=fileId
+  const fileIdFromUrl = searchParams.get("file");
+  const hasAppliedFileUrlRef = useRef(false);
+  useEffect(() => {
+    if (!data || !fileIdFromUrl || hasAppliedFileUrlRef.current) return;
+    hasAppliedFileUrlRef.current = true;
+    const deck = data.deck;
+    const inDeck = deck.items.find(
+      (item) => item.file?.id === fileIdFromUrl
+    );
+    if (inDeck?.file) {
+      setOpenFile({
+        fileId: inDeck.file.id,
+        name: inDeck.file.name,
+        mimeType: inDeck.file.mimeType,
+      });
+      if (typeof window !== "undefined") {
+        const u = new URL(window.location.href);
+        u.searchParams.delete("file");
+        window.history.replaceState(null, "", u.pathname + u.search);
+      }
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/share/${slug}/file/${fileIdFromUrl}/info`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((info: { name: string; mimeType: string }) => {
+        if (cancelled) return;
+        setOpenFile({
+          fileId: fileIdFromUrl,
+          name: info.name,
+          mimeType: info.mimeType,
+        });
+        if (typeof window !== "undefined") {
+          const u = new URL(window.location.href);
+          u.searchParams.delete("file");
+          window.history.replaceState(null, "", u.pathname + u.search);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [data, slug, fileIdFromUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -328,7 +379,7 @@ export default function SharePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background container max-w-3xl m-auto">
       {/* Top: menu / header */}
       <header className="shrink-0 border-b bg-background">
         <div className="flex flex-wrap items-start justify-between gap-4 p-4">
@@ -338,27 +389,11 @@ export default function SharePage() {
                 <img
                   src={logoUrl}
                   alt=""
-                  className="h-8 w-8 shrink-0 object-contain"
+                  className="h-8 shrink-0 object-contain"
                 />
               )}
               <h1 className="text-2xl font-semibold">{share.title}</h1>
             </div>
-            {share.descriptionRichText && (
-              <div
-                className="mt-2 prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: share.descriptionRichText }}
-              />
-            )}
-            {share.targetLink && (
-              <a
-                href={share.targetLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-block text-primary underline"
-              >
-                {share.targetLink}
-              </a>
-            )}
           </div>
           {cta && cta.title && cta.link && (
             <Button
@@ -401,8 +436,42 @@ export default function SharePage() {
             </div>
           )}
         </div>
-        <div className="flex-1 p-4">
-          {singleFile && theFile ? (
+        <div className=" p-4">
+          {openFile ? (
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 -ml-2"
+                  onClick={() => setOpenFile(null)}
+                >
+                  <ArrowLeft className="size-4" />
+                  Back to list
+                </Button>
+                <span className="truncate text-sm text-muted-foreground">{openFile.name}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => setOpenFile(null)}
+                  aria-label="Close"
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1">
+                <FileViewer
+                  slug={slug}
+                  fileId={openFile.fileId}
+                  name={openFile.name}
+                  mimeType={openFile.mimeType}
+                  onTrackOpen={() => track("file_open", "file", openFile.fileId)}
+                  onTrack={track}
+                />
+              </div>
+            </div>
+          ) : singleFile && theFile ? (
             <FileViewer
               slug={slug}
               fileId={theFile.id}
@@ -420,7 +489,7 @@ export default function SharePage() {
                   <li
                     key={dir.id}
                     className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3 hover:bg-muted/50"
-                    onDoubleClick={() => enterDirectory(dir.id, dir.name)}
+                    onClick={() => enterDirectory(dir.id, dir.name)}
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       <Folder className="size-4 shrink-0" />
@@ -429,7 +498,10 @@ export default function SharePage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => enterDirectory(dir.id, dir.name)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        enterDirectory(dir.id, dir.name);
+                      }}
                     >
                       Open
                     </Button>
@@ -439,7 +511,7 @@ export default function SharePage() {
                   <li
                     key={file.id}
                     className="flex cursor-pointer items-center justify-between gap-4 rounded-md border p-3 hover:bg-muted/50"
-                    onDoubleClick={() =>
+                    onClick={() =>
                       setOpenFile({
                         fileId: file.id,
                         name: file.name,
@@ -451,7 +523,7 @@ export default function SharePage() {
                       <FileTypeIcon mimeType={file.mimeType} name={file.name} className="size-4 shrink-0" />
                       <span className="truncate">{file.name}</span>
                     </div>
-                    <div className="flex shrink-0 gap-2">
+                    <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="outline"
                         size="sm"
@@ -469,15 +541,15 @@ export default function SharePage() {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          setDownloadFile({
+                          setShareFile({
                             fileId: file.id,
                             name: file.name,
                             mimeType: file.mimeType,
                           })
                         }
                       >
-                        <Download className="mr-1 size-4" />
-                        Download
+                        <Share2 className="mr-1 size-4" />
+                        Share
                       </Button>
                     </div>
                   </li>
@@ -492,7 +564,7 @@ export default function SharePage() {
                 <li
                   key={item.id}
                   className={`flex items-center justify-between gap-4 rounded-md border p-3 ${item.file || item.directory ? "cursor-pointer hover:bg-muted/50" : ""}`}
-                  onDoubleClick={() => {
+                  onClick={() => {
                     if (item.file) {
                       setOpenFile({
                         fileId: item.file.id,
@@ -517,7 +589,7 @@ export default function SharePage() {
                       </>
                     ) : null}
                   </div>
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
                     {item.file && (
                       <>
                         <Button
@@ -537,15 +609,15 @@ export default function SharePage() {
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            setDownloadFile({
+                            setShareFile({
                               fileId: item.file!.id,
                               name: item.file!.name,
                               mimeType: item.file!.mimeType,
                             })
                           }
                         >
-                          <Download className="mr-1 size-4" />
-                          Download
+                          <Share2 className="mr-1 size-4" />
+                          Share
                         </Button>
                       </>
                     )}
@@ -566,6 +638,26 @@ export default function SharePage() {
             </ul>
           )}
         </div>
+        {/* Description below files list / video */}
+        {(share.descriptionRichText || share.targetLink) && (
+          <div className="border-t px-4 py-4">
+            {share.descriptionRichText && (
+              <RichTextWithEmbeds
+                html={share.descriptionRichText}
+              />
+            )}
+            {share.targetLink && (
+              <a
+                href={share.targetLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-primary underline"
+              >
+                {share.targetLink}
+              </a>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Bottom: footer */}
@@ -589,46 +681,41 @@ export default function SharePage() {
           )}
         </footer>
       )}
-      {openFile && (
-        <FullscreenShareFileViewer
-          slug={slug}
-          fileId={openFile.fileId}
-          name={openFile.name}
-          mimeType={openFile.mimeType}
-          onClose={() => setOpenFile(null)}
-          onTrackOpen={() => track("file_open", "file", openFile.fileId)}
-          onTrack={track}
-        />
-      )}
-
-      <Dialog open={!!downloadFile} onOpenChange={(o) => !o && setDownloadFile(null)}>
+      <Dialog open={!!shareFile} onOpenChange={(open) => !open && setShareFile(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Download</DialogTitle>
+            <DialogTitle>Share file link</DialogTitle>
             <DialogDescription>
               The data in this file must not be shared without our approval. By
-              downloading, you agree to keep the contents confidential.
+              sharing this link, you agree to keep the contents confidential.
             </DialogDescription>
           </DialogHeader>
+          {shareFile && (
+            <div className="space-y-3">
+              <div className="rounded-md bg-muted p-3 font-mono text-sm break-all">
+                {typeof window !== "undefined"
+                  ? `${window.location.origin}/share/${slug}?file=${shareFile.fileId}`
+                  : ""}
+              </div>
+              <Button
+                onClick={() => {
+                  if (!shareFile) return;
+                  const url = `${window.location.origin}/share/${slug}?file=${shareFile.fileId}`;
+                  navigator.clipboard.writeText(url).then(
+                    () => toast.success("Link copied to clipboard"),
+                    () => {}
+                  );
+                  track("file_share_link_copied", "file", shareFile.fileId);
+                }}
+              >
+                <Copy className="mr-2 size-4" />
+                Copy link
+              </Button>
+            </div>
+          )}
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDownloadFile(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (!downloadFile) return;
-                track("file_download", "file", downloadFile.fileId);
-                window.open(
-                  `/api/share/${slug}/download/${downloadFile.fileId}`,
-                  "_blank"
-                );
-                setDownloadFile(null);
-              }}
-            >
-              I agree, download
+            <Button variant="outline" onClick={() => setShareFile(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
