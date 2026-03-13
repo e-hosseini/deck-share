@@ -104,6 +104,41 @@ function formatDuration(from: string, to: string): string {
   return `${h}h`;
 }
 
+type AggregatedAction = {
+  action: string;
+  resourceType: string | null;
+  resourceId: string | null;
+  resourceName: string | null;
+  startAt: string;
+  endAt: string | null;
+  count: number;
+};
+
+function aggregateConsecutiveSameActions(actions: Action[]): AggregatedAction[] {
+  if (actions.length === 0) return [];
+  const result: AggregatedAction[] = [];
+  let i = 0;
+  while (i < actions.length) {
+    const first = actions[i];
+    let j = i + 1;
+    while (j < actions.length && actions[j].action === first.action) {
+      j++;
+    }
+    const nextAction = actions[j];
+    result.push({
+      action: first.action,
+      resourceType: first.resourceType,
+      resourceId: first.resourceId,
+      resourceName: first.resourceName,
+      startAt: first.createdAt,
+      endAt: nextAction ? nextAction.createdAt : null,
+      count: j - i,
+    });
+    i = j;
+  }
+  return result;
+}
+
 export default function VisitorEventsPage() {
   const params = useParams();
   const id = params.id as string;
@@ -219,7 +254,7 @@ export default function VisitorEventsPage() {
         <CardHeader>
           <CardTitle>Events</CardTitle>
           <CardDescription>
-            Timeline of page views, file opens, downloads, and navigations (updates every 5s).
+            Timeline of page views, file opens, downloads, and navigations. Consecutive same events are merged into one row with combined duration (updates every 5s).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -230,8 +265,8 @@ export default function VisitorEventsPage() {
           ) : (
             <div className="relative pl-6">
               <ul className="space-y-0 list-none p-0 m-0">
-                {actions.map((a, i) => (
-                  <Fragment key={a.id}>
+                {aggregateConsecutiveSameActions(actions).map((agg, i) => (
+                  <Fragment key={`${agg.startAt}-${agg.action}-${i}`}>
                     <li className="relative flex pb-0">
                       <span
                         className="absolute -left-3 top-1.5 size-2.5 shrink-0 rounded-full bg-primary border-2 border-background z-1"
@@ -239,19 +274,30 @@ export default function VisitorEventsPage() {
                       />
                       <div className="flex-1 min-w-0 pt-0.5 pb-1 pl-1">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="text-sm font-medium">{formatAction(a.action)}</span>
+                          <span className="text-sm font-medium">{formatAction(agg.action)}</span>
+                          {agg.count > 1 && (
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              ×{agg.count}
+                            </span>
+                          )}
                           <ResourceLink
-                            resourceType={a.resourceType}
-                            resourceId={a.resourceId}
-                            resourceName={a.resourceName}
+                            resourceType={agg.resourceType}
+                            resourceId={agg.resourceId}
+                            resourceName={agg.resourceName}
                           />
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(a.createdAt).toLocaleString()}
+                          {new Date(agg.startAt).toLocaleString()}
+                          {agg.endAt != null && (
+                            <>
+                              {" · "}
+                              {formatDuration(agg.startAt, agg.endAt)}
+                            </>
+                          )}
                         </p>
                       </div>
                     </li>
-                    {i < actions.length - 1 && (
+                    {agg.endAt != null && (
                       <li
                         className="relative flex pl-0 min-h-8"
                         aria-hidden
@@ -259,7 +305,7 @@ export default function VisitorEventsPage() {
                         <div className="absolute left-[5px] top-0 bottom-0 w-px bg-border" />
                         <div className="flex-1 flex items-center pl-4">
                           <span className="text-xs text-muted-foreground">
-                            {formatDuration(a.createdAt, actions[i + 1].createdAt)}
+                            {formatDuration(agg.startAt, agg.endAt)}
                           </span>
                         </div>
                       </li>

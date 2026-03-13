@@ -107,6 +107,8 @@ model Share {
   passwordHash      String?   @map("password_hash")
   singleUse         Boolean   @default(false) @map("single_use")
   isActive          Boolean   @default(true) @map("is_active")
+  metaTitle         String?   @map("meta_title")
+  metaDescription   String?   @map("meta_description") @db.Text
   createdById       String    @map("created_by_id")
   createdAt         DateTime  @default(now()) @map("created_at")
 

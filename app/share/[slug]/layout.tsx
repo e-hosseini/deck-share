@@ -39,9 +39,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const siteName = siteSettings?.websiteTitle?.trim() || "Deck Share";
   const validShare = share && new Date() <= share.expiresAt;
-  const title = validShare ? share.deck.name : siteName;
-  const rawDescription = validShare && share.deck.description?.trim()
-    ? share.deck.description.trim()
+  const title = validShare
+    ? (share.metaTitle?.trim() || share.deck.name)
+    : siteName;
+  const rawDescription = validShare
+    ? (share.metaDescription?.trim() || share.deck.description?.trim() || siteSettings?.siteDescription?.trim() || "Share decks with tracking")
     : (siteSettings?.siteDescription?.trim() || "Share decks with tracking");
   const description = rawDescription.length > 100 ? `${rawDescription.slice(0, 100)}…` : rawDescription;
 
