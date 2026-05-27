@@ -211,10 +211,13 @@ export default function VisitorEventsPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold">Visitor events</h1>
+          <h1 className="text-2xl font-semibold hidden md:block">Visitor events</h1>
           <p className="text-muted-foreground text-sm">
             {share.title} · /share/{share.slug}
           </p>
+        </div>
+        <div className="block md:hidden p-4">
+          <h1 className="text-2xl font-semibold">{share.title}</h1>
         </div>
       </div>
 

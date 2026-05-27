@@ -433,7 +433,7 @@ export default function SharePage() {
                   className="h-8 shrink-0 object-contain"
                 />
               )}
-              <div>
+              <div className="hidden md:block">
                 <h1 className="text-2xl font-semibold">{share.title}</h1>
                 {siteDescription && (
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -466,6 +466,9 @@ export default function SharePage() {
               {cta.title}
             </Button>
           )}
+        </div>
+        <div className="block md:hidden p-4">
+          <h1 className="text-2xl font-semibold">{share.title}</h1>
         </div>
       </header>
 
