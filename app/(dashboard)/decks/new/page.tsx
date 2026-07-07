@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { RichTextEditor } from "@/components/share-form/rich-text-editor";
+import { PlateDescriptionEditor } from "@/components/deck-form/plate-description-editor";
 
 export default function NewDeckPage() {
   const router = useRouter();
@@ -51,7 +51,7 @@ export default function NewDeckPage() {
           <CardTitle>New deck</CardTitle>
           <CardDescription>Create a deck and add files or folders from your library.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-w-0">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <p className="text-sm text-destructive">{error}</p>}
             <div className="space-y-2">
@@ -64,9 +64,9 @@ export default function NewDeckPage() {
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <Label htmlFor="description">Description (optional)</Label>
-              <RichTextEditor
+              <PlateDescriptionEditor
                 value={description}
                 onChange={setDescription}
                 placeholder="Optional description…"
