@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "private": false,
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "author": "Ehsan Hosseini",
   "scripts": {
     "dev": "next dev --webpack",

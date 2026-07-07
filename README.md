@@ -85,7 +85,7 @@ Unsupported types can still be uploaded if added to the allow-list; they will sh
 
 ## Tech stack
 
-- **Runtime:** Node.js 20+
+- **Runtime:** Node.js 22+
 - **Framework:** Next.js 16, React 19
 - **Database:** PostgreSQL, Prisma
 - **Auth:** NextAuth 5
@@ -97,7 +97,7 @@ Unsupported types can still be uploaded if added to the allow-list; they will sh
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - PostgreSQL 16 (or use Docker)
 - npm / yarn / pnpm
 
