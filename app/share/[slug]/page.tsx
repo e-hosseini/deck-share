@@ -420,7 +420,9 @@ export default function SharePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background container max-w-3xl m-auto text-sm">
+    <div
+      className={`min-h-screen flex flex-col bg-background container m-auto text-sm ${singleFile ? "max-w-6xl" : "max-w-3xl"}`}
+    >
       {/* Top: menu / header */}
       <header className="shrink-0 border-b bg-background">
         <div className="flex flex-wrap items-start justify-between gap-4 p-4">
@@ -522,6 +524,7 @@ export default function SharePage() {
                     track("file_open", "file", openFile.fileId)
                   }
                   onTrack={track}
+                  large={singleFile}
                 />
               </div>
             </div>
@@ -533,6 +536,7 @@ export default function SharePage() {
               mimeType={theFile.mimeType}
               onTrackOpen={() => track("file_open", "file", theFile.id)}
               onTrack={track}
+              large={singleFile}
             />
           ) : isInDirectory ? (
             directoryLoading ? (

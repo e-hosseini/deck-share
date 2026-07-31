@@ -58,9 +58,10 @@ type FileViewerProps = {
   mimeType: string;
   onTrackOpen: () => void;
   onTrack?: (action: string, resourceType?: string, resourceId?: string, metadata?: Record<string, unknown>) => void;
+  large?: boolean;
 };
 
-export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack }: FileViewerProps) {
+export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack, large = false }: FileViewerProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const url = `/api/share/${slug}/file/${fileId}`;
@@ -135,10 +136,10 @@ export function FileViewer({ slug, fileId, name, mimeType, onTrackOpen, onTrack 
 if (isVideo) {
       return (
         <div className="flex h-full min-h-0 flex-col items-center justify-center gap-2 bg-muted/30 pt-0.5">
-          <div className="min-h-0 w-full max-w-4xl flex-1">
+          <div className={`min-h-0 w-full flex-1 ${large ? "max-w-full" : "max-w-4xl"}`}>
             <VideoJsPlayer url={url} mimeType={mimeType} onTrack={track} />
           </div>
-          <p className="w-full max-w-4xl truncate px-1 text-xs text-muted-foreground" title={name}>
+          <p className={`w-full truncate px-1 text-xs text-muted-foreground ${large ? "max-w-full" : "max-w-4xl"}`} title={name}>
             {name}
           </p>
         </div>
@@ -152,6 +153,7 @@ if (isVideo) {
           url={url}
           title={name}
           withCredentials
+          large={large}
           onPageChange={(pageNumber, numPages) =>
             track("pdf_page_view", { pageNumber, numPages })
           }

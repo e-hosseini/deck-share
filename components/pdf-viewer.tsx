@@ -15,6 +15,7 @@ type PdfViewerProps = {
   title?: string;
   withCredentials?: boolean;
   onPageChange?: (pageNumber: number, numPages: number) => void;
+  large?: boolean;
 };
 
 type ViewMode = "single" | "all";
@@ -22,12 +23,13 @@ type ViewMode = "single" | "all";
 // A4 in PDF points (72pt = 1 inch): 210mm x 297mm
 const A4_WIDTH = 595;
 
-export function PdfViewer({ url, title, withCredentials = false, onPageChange }: PdfViewerProps) {
+export function PdfViewer({ url, title, withCredentials = false, onPageChange, large = false }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("single");
   const [containerWidth, setContainerWidth] = useState<number>(400);
   const [fixedPageWidth, setFixedPageWidth] = useState<number | null>(null);
+  const [pageSize, setPageSize] = useState<{ width: number; height: number } | null>(null);
   const fixedWidthSetRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,9 +58,65 @@ export function PdfViewer({ url, title, withCredentials = false, onPageChange }:
     return () => ro.disconnect();
   }, [fixedPageWidth]);
 
+  const pageLoadingPlaceholder = pageSize ? (
+    <div
+      className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground"
+      style={{ width: pageWidth, height: (pageWidth * pageSize.height) / pageSize.width }}
+    >
+      Loading page…
+    </div>
+  ) : (
+    <p className="text-muted-foreground">Loading page…</p>
+  );
+
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-muted/30" ref={containerRef}>
-      <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-b bg-background/80 px-2 py-1.5">
+      <div className="min-h-0 flex-1 overflow-auto p-4">
+        <Document
+          file={url}
+          options={documentOptions}
+          loading={<p className="text-muted-foreground">Loading PDF…</p>}
+          error={<p className="text-destructive">Failed to load PDF.</p>}
+          onLoadSuccess={async (pdf) => {
+            setNumPages(pdf.numPages);
+            if (!fixedWidthSetRef.current) {
+              fixedWidthSetRef.current = true;
+              const page = await pdf.getPage(1);
+              const viewport = page.getViewport({ scale: 1 });
+              setPageSize({ width: viewport.width, height: viewport.height });
+              const maxW = containerRef.current
+                ? Math.min(containerRef.current.getBoundingClientRect().width - 32, large ? 1200 : 800)
+                : large ? 1200 : 800;
+              setFixedPageWidth(Math.min(viewport.width, maxW));
+            }
+          }}
+          className={viewMode === "all" ? "flex flex-col items-center" : "flex justify-center"}
+        >
+          {viewMode === "single" ? (
+            <Page
+              pageNumber={pageNumber}
+              width={pageWidth}
+              renderTextLayer={true}
+              renderAnnotationLayer={true}
+              loading={pageLoadingPlaceholder}
+            />
+          ) : (
+            numPages !== null &&
+            Array.from({ length: numPages }, (_, i) => i + 1).map((n) => (
+              <div key={n} className="mb-4 last:mb-0">
+                <Page
+                  pageNumber={n}
+                  width={pageWidth}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                  loading={pageLoadingPlaceholder}
+                />
+              </div>
+            ))
+          )}
+        </Document>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t bg-background/80 px-2 py-1.5">
         {viewMode === "single" ? (
           <>
             <button
@@ -106,50 +164,6 @@ export function PdfViewer({ url, title, withCredentials = false, onPageChange }:
             All
           </button>
         </div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto p-4">
-        <Document
-          file={url}
-          options={documentOptions}
-          loading={<p className="text-muted-foreground">Loading PDF…</p>}
-          error={<p className="text-destructive">Failed to load PDF.</p>}
-          onLoadSuccess={async (pdf) => {
-            setNumPages(pdf.numPages);
-            if (!fixedWidthSetRef.current) {
-              fixedWidthSetRef.current = true;
-              const page = await pdf.getPage(1);
-              const viewport = page.getViewport({ scale: 1 });
-              const maxW = containerRef.current
-                ? Math.min(containerRef.current.getBoundingClientRect().width - 32, 800)
-                : 800;
-              setFixedPageWidth(Math.min(viewport.width, maxW));
-            }
-          }}
-          className={viewMode === "all" ? "flex flex-col items-center" : "flex justify-center"}
-        >
-          {viewMode === "single" ? (
-            <Page
-              pageNumber={pageNumber}
-              width={pageWidth}
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-              loading={<p className="text-muted-foreground">Loading page…</p>}
-            />
-          ) : (
-            numPages !== null &&
-            Array.from({ length: numPages }, (_, i) => i + 1).map((n) => (
-              <div key={n} className="mb-4 last:mb-0">
-                <Page
-                  pageNumber={n}
-                  width={pageWidth}
-                  renderTextLayer={true}
-                  renderAnnotationLayer={true}
-                  loading={<p className="text-muted-foreground">Loading page…</p>}
-                />
-              </div>
-            ))
-          )}
-        </Document>
       </div>
     </div>
   );
