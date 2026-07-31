@@ -719,16 +719,6 @@ export default function SharePage() {
             {share.descriptionRichText && (
               <RichTextWithEmbeds html={share.descriptionRichText} />
             )}
-            {share.targetLink && (
-              <a
-                href={share.targetLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-block text-primary underline"
-              >
-                {share.targetLink}
-              </a>
-            )}
           </div>
         )}
       </main>
